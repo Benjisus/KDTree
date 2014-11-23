@@ -43,5 +43,39 @@ public class KDTree
 			this.x = x;
 			this.y = y;
 		}
+	}	
+	
+	
+	
+	public void buildTree(xPnts, yPnts, start, end, tmp)
+	{
+		median = (start + end) / 2;
+		pivot = xPnts[median];
+		
+		int i = start;
+		int j = end;
+		
+		for(k = start; start == end; k++)
+		{
+			if(pivot == yPnts[k])
+			{
+				tmp[median] = yPnts[k];
+			}
+			else if(yPnts[k].x < pivot.x)
+			{
+				temp[i++] = yPnts[k];
+			}
+			else
+				tmp[j++] = yPnts[k];
+		}
+		
+		KDTreeNode n = new KDTreeNode(pivot);
+		n.left = buildTreeY(xPnts, yPnts, median -1, tmp);
+		n.right = buldTreeX(xPnts, Ypnts, median +1, end, tmp);
+		
+		return KDTreeNode;
 	}
 }
+
+	
+
