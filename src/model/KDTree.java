@@ -14,11 +14,18 @@ public class KDTree
 	public void buildTree(Boid[] xPnts, Boid[] yPnts)
 	{
 		Boid[] tmp = (Boid[])Array.newInstance(KDTree.Boid.class, xPnts.length);
-		buildTreeX(xPnts, yPnts, 0, xPnts.length-1, tmp);
+		root = buildTreeX(xPnts, yPnts, 0, xPnts.length-1, tmp);
+		
+		System.out.println(tmp.length);
+		for(int count = 0; count < tmp.length; count++)
+		{
+			System.out.println(tmp[count]);
+		}
 	}
 	
 	public KDTreeNode buildTreeX(Boid[] xPnts, Boid[] yPnts, int start, int end, Boid[] tmp)
 	{
+		System.out.println("X");
 		if(end < start)
 		{
 			return null;
@@ -30,29 +37,30 @@ public class KDTree
 		int i = start;
 		int j = end;
 		
-		for(int k = start; start == end; k++)
+		for(int k = start; k == end; k++)
 		{
-			if(pivot == yPnts[k])
+			if(pivot == xPnts[k])
 			{
-				tmp[median] = yPnts[k];
+				tmp[median] = xPnts[k];
 			}
-			else if(yPnts[k].x < pivot.x)
+			else if(xPnts[k].x < pivot.x)
 			{
-				tmp[i++] = yPnts[k];
+				tmp[i++] = xPnts[k];
 			}
 			else
-				tmp[j++] = yPnts[k];
+				tmp[j++] = xPnts[k];
 		}
 		
 		KDTreeNode n = new KDTreeNode(pivot, 0, null, null);
-		n.left = buildTreeY(xPnts, yPnts, start, median -1, tmp);
-		n.right = buildTreeY(xPnts, yPnts, median +1, end, tmp);
+		n.right = buildTreeY(xPnts, yPnts, start, median -1, tmp);
+		n.left = buildTreeY(xPnts, yPnts, median +1, end, tmp);
 		
 		return n;
 	}
 	
 	public KDTreeNode buildTreeY(Boid[] xPnts, Boid[] yPnts, int start, int end, Boid[] tmp)
 	{
+		System.out.println("Y");
 		if(end < start)
 		{
 			return null;
@@ -64,13 +72,13 @@ public class KDTree
 		int i = start;
 		int j = end;
 		
-		for(int k = start; start == end; k++)
+		for(int k = start; k == end; k++)
 		{
 			if(pivot == yPnts[k])
 			{
 				tmp[median] = yPnts[k];
 			}
-			else if(yPnts[k].x < pivot.x)
+			else if(yPnts[k].y < pivot.y)
 			{
 				tmp[i++] = yPnts[k];
 			}
@@ -79,11 +87,34 @@ public class KDTree
 		}
 		
 		KDTreeNode n = new KDTreeNode(pivot, 1, null, null);
-		n.left = buildTreeX(xPnts, yPnts, start, median -1, tmp);
-		n.right = buildTreeX(xPnts, yPnts, median +1, end, tmp);
+		n.right = buildTreeX(xPnts, yPnts, start, median -1, tmp);
+		n.left = buildTreeX(xPnts, yPnts, median +1, end, tmp);
 		
 		return n;
 	}
+	
+	public void print()
+	{
+		KDTreeNode current = root.right.right;
+		System.out.println("Left: " + current.left);
+		System.out.println("Right: " + current.right);
+	}
+	
+	/**
+	 * Determines the size of this tree
+	 */
+	public int size() 
+	{
+        return size(root);
+    }
+	/**
+	 * Recursively counts every node held in this tree.
+	 */
+    private int size(KDTreeNode n)
+    {
+        if (n == null) return 0;
+        return 1 + size(n.left) + size(n.right);
+    }
 	
 	//-----------------------------KDTreeNode Class-------------------------------------------
 	private class KDTreeNode
@@ -114,6 +145,14 @@ public class KDTree
 			this.split = split;
 			this.left = left;
 			this.right = right;
+		}
+		
+		@Override
+		public String toString() 
+		{
+			String string = "X: " + boid.x;
+			string += "\nY: " + boid.y;
+			return string;
 		}
 	}
 	
