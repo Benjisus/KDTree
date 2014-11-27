@@ -1,5 +1,7 @@
 package controller;
 
+import java.util.ArrayList;
+
 import model.KDTree;
 import model.KDTree.Boid;
 
@@ -18,11 +20,17 @@ public class Test
 		Boid boid7 = tree.new Boid(25, -15);
 		Boid boid8 = tree.new Boid(30, -20);
 		
-		Boid[] xList = {boid1, boid2, boid3, boid4, boid5, boid6, boid7, boid8};
-		Boid[] yList = {boid8, boid7, boid6, boid5, boid4, boid3, boid2, boid1};
+		ArrayList<Boid> boids = new ArrayList<Boid>();
+		boids.add(boid1);
+		boids.add(boid2);
+		boids.add(boid3);
+		boids.add(boid4);
+		boids.add(boid5);
+		boids.add(boid6);
+		boids.add(boid7);
+		boids.add(boid8);
 		
-		
-		tree.buildTree(xList, yList);
+		tree.buildTree(boids);
 		tree.print();
 	}
 
