@@ -5,29 +5,43 @@ import java.util.ArrayList;
 
 public class KDTree
 {
-	private KDTreeNode root;
+	private KDTreeNode root; //root node of the tree.
 	
+	/**
+	 * Creates a new KDTree. BuildTree should be called before using this tree.
+	 */
 	public KDTree()
 	{
 		root = null;
 	}
 	
+	/**
+	 * Finds all neighbours whose distance is from the target boid is smaller than the given range.
+	 */
 	public ArrayList<Boid> findNeighbours(double range, Boid target)
 	{
-		ArrayList<Boid> neighbours = new ArrayList<Boid>();
-		range = range*range;
-		return findNeighbours(range, neighbours, target, root);
+		ArrayList<Boid> neighbours = new ArrayList<Boid>(); //list to hold neighbours
+		range = range*range; //need to use range^2
+		return findNeighbours(range, neighbours, target, root); //recursive method
 	}
 	
+	/**
+	 * Recursively determines the neighbours that are within a certain range of the target Boid.
+	 * @param range - distance^2 from the target boid.
+	 * @param neighbours - list to hold qualifying neighbours
+	 * @param target - target boid to compare to
+	 * @param current - currently accessed node in the tree.
+	 * @return list of neighbours within the given range.
+	 */
 	private ArrayList<Boid> findNeighbours(double range, ArrayList<Boid> neighbours, Boid target, KDTreeNode current)
 	{
-		if(current.left == null && current.right == null)
+		if(current == null) //base case, fell off tree.
 		{
-			neighbours.add(current.boid);
 			return neighbours;
 		}
 		
-		double xDist = 0;
+		//calculate distance
+		double xDist = 0; //difference on the x-axis
 		if(target.x > current.boid.x)
 		{
 			xDist = target.x - current.boid.x;
@@ -37,7 +51,7 @@ public class KDTree
 			xDist = current.boid.x - target.x;
 		}
 		
-		double yDist = 0;
+		double yDist = 0; //difference on the y-axis
 		if(target.y > current.boid.y)
 		{
 			yDist = target.y - current.boid.y;
@@ -47,42 +61,69 @@ public class KDTree
 			yDist = current.boid.y - target.y;
 		}
 		
-		double distance = (xDist * xDist) + (yDist * yDist); //distance formula
+		double distance = (xDist * xDist) + (yDist * yDist); //distance formula, gives distance^2
 		
-		if(distance > range)
+		if(distance > range) //too far away from each other. (comparing distance^2 and range^2)
 		{
 			return neighbours;
 		}
-		else
+		else //within range, add this to the list.
 		{
 			neighbours.add(current.boid);
 		}
 		
-		findNeighbours(range, neighbours, target, current.left);
-		findNeighbours(range, neighbours, target, current.right);
+		if(current.split == 0) //current level ordered by x-axis
+		{
+			if(xDist > root.boid.x)
+			{
+				findNeighbours(range, neighbours, target, current.left);
+			}
+			else
+			{
+				findNeighbours(range, neighbours, target, current.right);
+			}
+		}
+		else //current level ordered by y-axis
+		{
+			if(yDist > root.boid.y)
+			{
+				findNeighbours(range, neighbours, target, current.left);
+			}
+			else
+			{
+				findNeighbours(range, neighbours, target, current.right);
+			}
+		}
 		
 		return neighbours;
 	}
 	
+	/**
+	 * Builds the tree using the given list of boids.
+	 * This method must be called before using the tree.
+	 */
 	public void buildTree(ArrayList<Boid> boids)
 	{
-		Boid[] xList = (Boid[])Array.newInstance(KDTree.Boid.class, boids.size());
-		Boid[] yList = (Boid[])Array.newInstance(KDTree.Boid.class, boids.size());
-		for(int count = 0; count < boids.size(); count++)
+		Boid[] xList = (Boid[])Array.newInstance(KDTree.Boid.class, boids.size()); //array to hold the boids sorted by their x values
+		Boid[] yList = (Boid[])Array.newInstance(KDTree.Boid.class, boids.size()); //array to hold the boids sorted by their y values
+		for(int count = 0; count < boids.size(); count++) //put the boids into their lists.
 		{
 			xList[count] = boids.get(count);
 			yList[count] = boids.get(count);
 		}
 		
+		//sort them.
 		sortByX(xList, 0, xList.length-1);
 		sortByY(yList, 0, yList.length-1);
-		Boid[] tmp = (Boid[])Array.newInstance(KDTree.Boid.class, xList.length);
+		Boid[] tmp = (Boid[])Array.newInstance(KDTree.Boid.class, xList.length); //temporary array
 		root = buildTreeX(xList, yList, 0, xList.length-1, tmp);
 	}
 	
+	/**
+	 * Builds the tree comparing the x-values found in the x value sorted list.
+	 */
 	private KDTreeNode buildTreeX(Boid[] xPnts, Boid[] yPnts, int start, int end, Boid[] tmp)
 	{
-		System.out.println("X");
 		if(end < start)
 		{
 			return null;
@@ -115,9 +156,11 @@ public class KDTree
 		return n;
 	}
 	
+	/**
+	 * Builds the tree comparing y values in the y sorted list.
+	 */
 	private KDTreeNode buildTreeY(Boid[] xPnts, Boid[] yPnts, int start, int end, Boid[] tmp)
 	{
-		System.out.println("Y");
 		if(end < start)
 		{
 			return null;
@@ -151,11 +194,11 @@ public class KDTree
 	}
 	
 	/**
-	 * Uses the quicksort algorithm on the given list using the median of three elements as a pivot
+	 * Uses the quicksort algorithm on the given list of boids using the median of three elements as a pivot
 	 * @param array list to be sorted
 	 * @param start start of the list (inclusive)
 	 * @param end end of the list (inclusive)
-	 * @return sorted list
+	 * @return boids sorted by their x values.
 	 */
 	private Boid[] sortByX(Boid[] array, int start, int end)
 	{
@@ -207,11 +250,11 @@ public class KDTree
 	}
 	
 	/**
-	 * Uses the quicksort algorithm on the given list using the median of three elements as a pivot
+	 * Uses the quicksort algorithm on the given list of boids using the median of three elements as a pivot
 	 * @param array list to be sorted
 	 * @param start start of the list (inclusive)
 	 * @param end end of the list (inclusive)
-	 * @return sorted list
+	 * @return list of boids sorted by their y values.
 	 */
 	private Boid[] sortByY(Boid[] array, int start, int end)
 	{
@@ -277,7 +320,7 @@ public class KDTree
 	
 
 	/**
-	 * Finds the median of the values contained within the first, middle, and ending index.
+	 * Finds the median of the x values contained within the first, middle, and ending index.
 	 * @param array array to look in
 	 * @param start where to start looking
 	 * @param end where to stop looking
@@ -315,7 +358,7 @@ public class KDTree
 	}
 	
 	/**
-	 * Finds the median of the values contained within the first, middle, and ending index.
+	 * Finds the median of the y values contained within the first, middle, and ending index.
 	 * @param array array to look in
 	 * @param start where to start looking
 	 * @param end where to stop looking
@@ -350,13 +393,6 @@ public class KDTree
 	        }
 	    }
 	    return end-1; 
-	}
-	
-	public void print()
-	{
-		KDTreeNode current = root.left.left;
-		System.out.println("Left: " + current.left);
-		System.out.println("Right: " + current.right);
 	}
 	
 	/**

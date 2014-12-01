@@ -31,7 +31,8 @@ public class Test
 		boids.add(boid8);
 		
 		tree.buildTree(boids);
-		tree.print();
+		
+		ArrayList<KDTree.Boid> neighbours = tree.findNeighbours(20, boid3);
+		System.out.println(neighbours.size());
 	}
-
 }
