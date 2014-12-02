@@ -3,6 +3,8 @@ package model;
 import java.lang.reflect.Array;
 import java.util.ArrayList;
 
+import controller.Crowd;
+
 public class KDTree
 {
 	private KDTreeNode root; //root node of the tree.
@@ -17,11 +19,11 @@ public class KDTree
 	
 	/**
 	 * Finds all neighbours whose distance is from the target boid is smaller than the given range.
+	 * Use range^2
 	 */
-	public ArrayList<Boid> findNeighbours(double range, Boid target)
+	public ArrayList<Crowd.Boid> findNeighbours(double range, Crowd.Boid target)
 	{
-		ArrayList<Boid> neighbours = new ArrayList<Boid>(); //list to hold neighbours
-		range = range*range; //need to use range^2
+		ArrayList<Crowd.Boid> neighbours = new ArrayList<Crowd.Boid>(); //list to hold neighbours
 		return findNeighbours(range, neighbours, target, root); //recursive method
 	}
 	
@@ -33,65 +35,50 @@ public class KDTree
 	 * @param current - currently accessed node in the tree.
 	 * @return list of neighbours within the given range.
 	 */
-	private ArrayList<Boid> findNeighbours(double range, ArrayList<Boid> neighbours, Boid target, KDTreeNode current)
+	private ArrayList<Crowd.Boid> findNeighbours(double range, ArrayList<Crowd.Boid> neighbours, Crowd.Boid target, KDTreeNode current)
 	{
-		if(current == null) //base case, fell off tree.
+		double xDist = 0;
+		double yDist = 0;
+		double distance = 0;
+		
+		if(current == null || current.boid == target) //base case, fell off tree, or we are at the target boid.
 		{
 			return neighbours;
 		}
 		
 		//calculate distance
-		double xDist = 0; //difference on the x-axis
-		if(target.x > current.boid.x)
-		{
-			xDist = target.x - current.boid.x;
-		}
-		else
-		{
-			xDist = current.boid.x - target.x;
-		}
+		xDist = Math.abs(current.boid.posx - target.posx);
+		yDist = Math.abs(current.boid.posy - target.posy);
 		
-		double yDist = 0; //difference on the y-axis
-		if(target.y > current.boid.y)
-		{
-			yDist = target.y - current.boid.y;
-		}
-		else
-		{
-			yDist = current.boid.y - target.y;
-		}
+		distance = (xDist * xDist) + (yDist * yDist); //distance formula, gives distance^2
 		
-		double distance = (xDist * xDist) + (yDist * yDist); //distance formula, gives distance^2
-		
-		if(distance > range) //too far away from each other. (comparing distance^2 and range^2)
-		{
-			return neighbours;
-		}
-		else //within range, add this to the list.
+		if(distance <= range) //too far away from each other. (comparing distance^2 and range^2)
 		{
 			neighbours.add(current.boid);
+			neighbours = findNeighbours(range, neighbours, target, current.left);
+			neighbours = findNeighbours(range, neighbours, target, current.right);
 		}
 		
-		if(current.split == 0) //current level ordered by x-axis
+		if(current.split == 0)
 		{
-			if(xDist > root.boid.x)
+			if(current.boid.posx < target.posx - Math.sqrt(range))
 			{
-				findNeighbours(range, neighbours, target, current.left);
+				neighbours = findNeighbours(range, neighbours, target, current.right);
 			}
-			else
+			if(current.boid.posx > target.posx + Math.sqrt(range))
 			{
-				findNeighbours(range, neighbours, target, current.right);
+				neighbours = findNeighbours(range, neighbours, target, current.left);
 			}
 		}
-		else //current level ordered by y-axis
+		else
 		{
-			if(yDist > root.boid.y)
+			if(current.boid.posy < target.posy - Math.sqrt(range))
 			{
-				findNeighbours(range, neighbours, target, current.left);
+				neighbours = findNeighbours(range, neighbours, target, current.right);
 			}
-			else
+			if(current.boid.posy > target.posy + Math.sqrt(range))
 			{
-				findNeighbours(range, neighbours, target, current.right);
+				neighbours = findNeighbours(range, neighbours, target, current.left);
 			}
 		}
 		
@@ -102,56 +89,38 @@ public class KDTree
 	 * Builds the tree using the given list of boids.
 	 * This method must be called before using the tree.
 	 */
-	public void buildTree(ArrayList<Boid> boids)
+	public void buildTree(ArrayList<Crowd.Boid> boids)
 	{
-		Boid[] xList = (Boid[])Array.newInstance(KDTree.Boid.class, boids.size()); //array to hold the boids sorted by their x values
-		Boid[] yList = (Boid[])Array.newInstance(KDTree.Boid.class, boids.size()); //array to hold the boids sorted by their y values
+		Crowd.Boid[] xList = (Crowd.Boid[])Array.newInstance(Crowd.Boid.class, boids.size()); //array to hold the boids sorted by their x values
 		for(int count = 0; count < boids.size(); count++) //put the boids into their lists.
 		{
 			xList[count] = boids.get(count);
-			yList[count] = boids.get(count);
 		}
-		
-		//sort them.
-		sortByX(xList, 0, xList.length-1);
-		sortByY(yList, 0, yList.length-1);
-		Boid[] tmp = (Boid[])Array.newInstance(KDTree.Boid.class, xList.length); //temporary array
-		root = buildTreeX(xList, yList, 0, xList.length-1, tmp);
+				
+		root = buildTreeX(xList, 0, xList.length-1);
 	}
 	
 	/**
 	 * Builds the tree comparing the x-values found in the x value sorted list.
 	 */
-	private KDTreeNode buildTreeX(Boid[] xPnts, Boid[] yPnts, int start, int end, Boid[] tmp)
+	private KDTreeNode buildTreeX(Crowd.Boid[] xPnts, int start, int end)
 	{
 		if(end < start)
 		{
 			return null;
 		}
-		
-		int median = (start + end) / 2;
-		Boid pivot = xPnts[median];
-		
-		int i = start;
-		int j = end;
-		
-		for(int k = start; k == end; k++)
+		if(end == start)
 		{
-			if(pivot == xPnts[k])
-			{
-				tmp[median] = xPnts[k];
-			}
-			else if(xPnts[k].x < pivot.x)
-			{
-				tmp[i++] = xPnts[k];
-			}
-			else
-				tmp[j++] = xPnts[k];
+			return new KDTreeNode(xPnts[end], 0, null, null);
 		}
 		
+		sortByX(xPnts, start, end);
+		int median = (start + end) / 2;
+		Crowd.Boid pivot = xPnts[median];
+		
 		KDTreeNode n = new KDTreeNode(pivot, 0, null, null);
-		n.right = buildTreeY(xPnts, yPnts, start, median -1, tmp);
-		n.left = buildTreeY(xPnts, yPnts, median +1, end, tmp);
+		n.left = buildTreeY(xPnts, start, median -1);
+		n.right = buildTreeY(xPnts, median +1, end);
 		
 		return n;
 	}
@@ -159,36 +128,24 @@ public class KDTree
 	/**
 	 * Builds the tree comparing y values in the y sorted list.
 	 */
-	private KDTreeNode buildTreeY(Boid[] xPnts, Boid[] yPnts, int start, int end, Boid[] tmp)
+	private KDTreeNode buildTreeY(Crowd.Boid[] xPnts, int start, int end)
 	{
 		if(end < start)
 		{
 			return null;
 		}
-		
-		int median = (start + end) / 2;
-		Boid pivot = xPnts[median];
-		
-		int i = start;
-		int j = end;
-		
-		for(int k = start; k == end; k++)
+		if(end == start)
 		{
-			if(pivot == yPnts[k])
-			{
-				tmp[median] = yPnts[k];
-			}
-			else if(yPnts[k].y < pivot.y)
-			{
-				tmp[i++] = yPnts[k];
-			}
-			else
-				tmp[j++] = yPnts[k];
+			return new KDTreeNode(xPnts[end], 1, null, null);
 		}
 		
+		sortByY(xPnts, start, end);
+		int median = (start + end) / 2;
+		Crowd.Boid pivot = xPnts[median];
+		
 		KDTreeNode n = new KDTreeNode(pivot, 1, null, null);
-		n.right = buildTreeX(xPnts, yPnts, start, median -1, tmp);
-		n.left = buildTreeX(xPnts, yPnts, median +1, end, tmp);
+		n.left = buildTreeX(xPnts, start, median -1);
+		n.right = buildTreeX(xPnts, median +1, end);
 		
 		return n;
 	}
@@ -200,7 +157,7 @@ public class KDTree
 	 * @param end end of the list (inclusive)
 	 * @return boids sorted by their x values.
 	 */
-	private Boid[] sortByX(Boid[] array, int start, int end)
+	private Crowd.Boid[] sortByX(Crowd.Boid[] array, int start, int end)
 	{
 		int length = end - start; //length of this sublist
 		
@@ -211,19 +168,19 @@ public class KDTree
 		
 		int pivot = medianX(array, start, end); //find the median value at the first, middle and last index
 		
-		swap(array, pivot, end-1); //move pivot to the end of list to avoid special case
-		pivot = end-1; //pivot has been moved.
+		swap(array, pivot, end); //move pivot to the end of list to avoid special case
+		pivot = end; //pivot has been moved.
 		
 		//reorder array
 		int left = start; //start from beginning
 		int right = end-1; //start from end
 		while(true)
 		{
-			while(left < end-1 && array[left].x < array[pivot].x)//look for number out of place
+			while(left < end-1 && array[left].posx < array[pivot].posx)//look for number out of place
 			{
 				left++; //move towards middle
 			}
-			while(right > start && array[pivot].x < array[right].x)//look for number out of place
+			while(right > start && array[pivot].posx < array[right].posx)//look for number out of place
 			{
 				right--; //move towards middle
 			}
@@ -256,7 +213,7 @@ public class KDTree
 	 * @param end end of the list (inclusive)
 	 * @return list of boids sorted by their y values.
 	 */
-	private Boid[] sortByY(Boid[] array, int start, int end)
+	private Crowd.Boid[] sortByY(Crowd.Boid[] array, int start, int end)
 	{
 		int length = end - start; //length of this sublist
 		
@@ -267,19 +224,19 @@ public class KDTree
 		
 		int pivot = medianY(array, start, end); //find the median value at the first, middle and last index
 		
-		swap(array, pivot, end-1); //move pivot to the end of list to avoid special case
-		pivot = end-1; //pivot has been moved.
+		swap(array, pivot, end); //move pivot to the end of list to avoid special case
+		pivot = end; //pivot has been moved.
 		
 		//reorder array
 		int left = start; //start from beginning
 		int right = end-1; //start from end
 		while(true)
 		{
-			while(left < end-1 && array[left].y < array[pivot].y)//look for number out of place
+			while(left < end-1 && array[left].posy < array[pivot].posy)//look for number out of place
 			{
 				left++; //move towards middle
 			}
-			while(right > start && array[pivot].y < array[right].y)//look for number out of place
+			while(right > start && array[pivot].posy < array[right].posy)//look for number out of place
 			{
 				right--; //move towards middle
 			}
@@ -311,13 +268,12 @@ public class KDTree
 	 * @param a index of first value to be swapped
 	 * @param b index of second value to be swapped
 	 */
-	private void swap(Boid[] array, int a, int b)
+	private void swap(Crowd.Boid[] array, int a, int b)
 	{
-		Boid temp = array[a];
+		Crowd.Boid temp = array[a];
 		array[a] = array[b];
 		array[b] = temp;
 	}
-	
 
 	/**
 	 * Finds the median of the x values contained within the first, middle, and ending index.
@@ -326,35 +282,35 @@ public class KDTree
 	 * @param end where to stop looking
 	 * @return index of the median value
 	 */
-	private int medianX(Boid[] array, int start, int end)
+	private int medianX(Crowd.Boid[] array, int start, int end)
 	{
 		int middle = (start + end)/2; //middle index in between start and end
 		
-		if(array[start].x < array[middle].x) //start is smaller than middle
+		if(array[start].posx < array[middle].posx) //start is smaller than middle
 	    {
-	        if(array[start].x >= array[end-1].x) //start is bigger than end
+	        if(array[start].posx >= array[end].posx) //start is bigger than end
 	        {
 	            return start;
 	        }
 	        
-	        if(array[middle].x < array[end-1].x) //middle is smaller than end
+	        if(array[middle].posx < array[end].posx) //middle is smaller than end
 	        {
 	        	return middle;
 	        }
 	    }
 	    else //start is bigger than middle
 	    {
-	        if(array[start].x < array[end-1].x) //start is smaller than end
+	        if(array[start].posx < array[end].posx) //start is smaller than end
 	        {
 	        	return start;
 	        }
 	        
-	        if(array[middle].x >= array[end-1].x) //middle is bigger than end
+	        if(array[middle].posx >= array[end].posx) //middle is bigger than end
 	        {
 	        	return middle;
 	        }
 	    }
-	    return end-1; 
+	    return end; 
 	}
 	
 	/**
@@ -364,35 +320,35 @@ public class KDTree
 	 * @param end where to stop looking
 	 * @return index of the median value
 	 */
-	private int medianY(Boid[] array, int start, int end)
+	private int medianY(Crowd.Boid[] array, int start, int end)
 	{
 		int middle = (start + end)/2; //middle index in between start and end
 		
-		if(array[start].y < array[middle].y) //start is smaller than middle
+		if(array[start].posy < array[middle].posy) //start is smaller than middle
 	    {
-	        if(array[start].y >= array[end-1].y) //start is bigger than end
+	        if(array[start].posy >= array[end].posy) //start is bigger than end
 	        {
 	            return start;
 	        }
 	        
-	        if(array[middle].y < array[end-1].y) //middle is smaller than end
+	        if(array[middle].posy < array[end].posy) //middle is smaller than end
 	        {
 	        	return middle;
 	        }
 	    }
 	    else //start is bigger than middle
 	    {
-	        if(array[start].y < array[end-1].y) //start is smaller than end
+	        if(array[start].posy < array[end].posy) //start is smaller than end
 	        {
 	        	return start;
 	        }
 	        
-	        if(array[middle].y >= array[end-1].y) //middle is bigger than end
+	        if(array[middle].posy >= array[end].posy) //middle is bigger than end
 	        {
 	        	return middle;
 	        }
 	    }
-	    return end-1; 
+	    return end; 
 	}
 	
 	/**
@@ -408,33 +364,31 @@ public class KDTree
     private int size(KDTreeNode n)
     {
         if (n == null) return 0;
+        System.out.println(n);
         return 1 + size(n.left) + size(n.right);
+    }
+    
+    public void print()
+    {
+    	System.out.println(size());
+    }
+    
+    private void printList(Crowd.Boid[] array)
+    {
+    	for(int count = 0; count < array.length; count++)
+    	{
+    		System.out.println(array[count]);
+    	}
     }
 	
 	//-----------------------------KDTreeNode Class-------------------------------------------
 	private class KDTreeNode
 	{
-		public Boid boid; //position
+		public Crowd.Boid boid; //position
 		public int split; //0 = x 1 = y
 		public KDTreeNode left, right; //left and right nodes.
 		
-		/**
-		 * Creates a new KDTreeNode. Used to hold data within a KDTree.
-		 * @param x - x position of this node
-		 * @param y - y position of this node
-		 * @param split - 0 if x oriented, 1 if y oriented.
-		 * @param left - left child
-		 * @param right - right child
-		 */
-		public KDTreeNode(double x, double y, int split, KDTreeNode left, KDTreeNode right)
-		{
-			boid = new Boid(x, y);
-			this.split = split;
-			this.left = left;
-			this.right = right;
-		}
-		
-		public KDTreeNode(Boid boid, int split, KDTreeNode left, KDTreeNode right)
+		public KDTreeNode(Crowd.Boid boid, int split, KDTreeNode left, KDTreeNode right)
 		{
 			this.boid = boid;
 			this.split = split;
@@ -445,24 +399,9 @@ public class KDTree
 		@Override
 		public String toString() 
 		{
-			String string = "X: " + boid.x;
-			string += "\nY: " + boid.y;
-			return string;
+			return boid.toString();
 		}
 	}
-	
-	public class Boid
-	{
-		public double x;
-		public double y;
-		
-		public Boid(double x, double y)
-		{
-			this.x = x;
-			this.y = y;
-		}
-	}
-
 }
 
 	
