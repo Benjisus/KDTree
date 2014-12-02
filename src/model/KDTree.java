@@ -26,7 +26,8 @@ public class KDTree
 		ArrayList<Crowd.Boid> neighbours = new ArrayList<Crowd.Boid>(); //list to hold neighbours
 		return findNeighbours(range, neighbours, target, root); //recursive method
 	}
-	
+
+
 	/**
 	 * Recursively determines the neighbours that are within a certain range of the target Boid.
 	 * @param range - distance^2 from the target boid.
@@ -41,25 +42,30 @@ public class KDTree
 		double yDist = 0;
 		double distance = 0;
 		
-		if(current == null || current.boid == target) //base case, fell off tree, or we are at the target boid.
+		if(current == null ) //base case, fell off tree, or we are at the target boid.
 		{
 			return neighbours;
 		}
 		
 		//calculate distance
-		xDist = Math.abs(current.boid.posx - target.posx);
+		xDist = Math.abs(target.posx - current.boid.posy);
 		yDist = Math.abs(current.boid.posy - target.posy);
 		
 		distance = (xDist * xDist) + (yDist * yDist); //distance formula, gives distance^2
 		
-		if(distance <= range) //too far away from each other. (comparing distance^2 and range^2)
+//		if(distance <= range) //too far away from each other. (comparing distance^2 and range^2)
+//		{
+//			neighbours.add(current.boid);
+//			neighbours = findNeighbours(range, neighbours, target, current.left);
+//			neighbours = findNeighbours(range, neighbours, target, current.right);
+//		}
+		
+		
+		if(xDist*xDist + yDist*yDist <= range)
 		{
 			neighbours.add(current.boid);
-			neighbours = findNeighbours(range, neighbours, target, current.left);
-			neighbours = findNeighbours(range, neighbours, target, current.right);
 		}
-		
-		if(current.split == 0)
+		if(current.split == 1)
 		{
 			if(current.boid.posx < target.posx - Math.sqrt(range))
 			{
